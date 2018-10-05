@@ -56,7 +56,7 @@ class fileSystem(threading.Thread):
 		self.monitor()
 
 class remove_peer():
-	def __init__(self,peer_id):
+	def __init__(self, peer_id):
 		self.tracker_addr = ('localhost', 5000)
 		self.remove = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 		self.remove.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -68,8 +68,6 @@ class remove_peer():
 		print '\nRemoving peer...'
 		remove_cmd = json.dumps(remove_cmd)
 		self.remove.sendall(remove_cmd)
-
-
 
 
 

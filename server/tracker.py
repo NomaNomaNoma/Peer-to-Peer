@@ -9,6 +9,9 @@ HOSTNAME = 'localhost'
 PORT = 5000
 BUFFER = 65536
 
+peer = []
+download_peer = []
+
 class tracker_class():
 	def __init__(self):
 		self.server = None
@@ -99,8 +102,10 @@ class tracker_class():
 					elif command == 'register':
 						print 'Registering peer...'
 						peer_id = self.register_peer()
+						peer.append(peer_id)
 						client_connection.sendall(peer_id)
 						print 'Success! Peer is now connected on the tracker!'
+						print 'There are ' + str(len(peer)) + ' clients now: ' + str(peer)
 					elif command == 'list_all_files':
 						print 'Sending file list to peers...'
 						all_files = self.list_all_files()
@@ -109,13 +114,32 @@ class tracker_class():
 					elif command == 'remove':
 						peer_id = req['peer']
 						print 'Removing peer...'
+						peer.remove(str(peer_id))
+						time.sleep(1)
 						self.remove_peer(peer_id)
 						print 'Peer %d removed!' % peer_id
+						print 'There are ' + str(len(peer)) + ' clients now: ' + str(peer)
 					elif command == 'search':
 						search_results = self.search(req)
 						print 'Sending search results...'
 						client_connection.sendall(search_results)
 						print 'Search results sent!'
+					elif command == 'send':
+						print 'Adding client to the downloading list...'
+						peer_id = req['peer']
+						download_peer.append(peer_id)
+						time.sleep(1)
+						print 'Add success!'
+						print 'Now downloading clients are ' + str(download_peer)
+						client_connection.send('add success!')
+					elif command == 'delete':
+						print 'Removing client from the downloading list...'
+						peer_id = req['peer']
+						download_peer.remove(peer_id)
+						time.sleep(1)
+						print 'Remove success!'
+						print 'Now downloading clients are ' + str(download_peer)
+						client_connection.send('remove success!')
 					else:
 						pass
 

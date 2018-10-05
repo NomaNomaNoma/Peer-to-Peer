@@ -78,6 +78,26 @@ class query_indexer():
 			print 'File does not exist!'
 			return False
 
+	def add_to_tracker_list(self):
+		print 'Updating info to the tracker...'
+		time.sleep(1)
+		message = json.dumps({'command':'send', 'peer': credentials})
+		self.send_command_to_tracker(message)
+		print 'Update success!'
+		print 'The tracker will now help to find if any other clients are downloading the same file...'
+		time.sleep(1)
+		pass
+
+	def remove_from_tracker_list(self):
+		print 'Removing from downloading client list...'
+		time.sleep(1)
+		message = json.dumps({'command':'delete', 'peer': credentials})
+		self.send_command_to_tracker(message)
+		print 'Remove success!'
+		time.sleep(1)
+		pass
+
+
 	def obtain(self, peer_id, file_name):
 		print '-'*80
 		print 'Start downloading...'
@@ -237,7 +257,9 @@ if __name__ == '__main__':
 						message = raw_input("File is " + str(filesize/(1024*1024)) + \
 							"Mbs, downloaded? (Y/N)? ->")
 						if message == 'Y':
+							qi.add_to_tracker_list()
 							s.send('OK')
+							print 'Start downloading!'
 							os.chdir(chunks_path)
 							time.sleep(1)
 							print '-'*80
@@ -265,6 +287,9 @@ if __name__ == '__main__':
 
 							print "Creating File..."
 							make_files.makeFiles()
+							qi.remove_from_tracker_list()
+
+
 
 					else:
 						print "File does not Exists!"

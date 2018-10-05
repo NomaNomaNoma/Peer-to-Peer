@@ -1,6 +1,7 @@
 import os
 import sys
 import configparser
+import time
 
 root_path = os.path.dirname(os.path.realpath(__file__))
 chunks_path = os.path.join(root_path, 'chunks')
@@ -15,6 +16,12 @@ class makeFiles:
 		if self.parse_config_file(): #make sure has received all chunks
 			self.make_file()
 			print('File downloaded.')
+			message = raw_input('Do you want to continue as a server to help others? (Y/N)?')
+			if message == 'Y':
+				print 'You are still uploading chunks to others...'
+				time.sleep(5)
+			print 'Removing chunks...'
+			self.remove_chunks()
 		else:
 			print('Cannot download file, please download again.')
 
@@ -37,7 +44,6 @@ class makeFiles:
 				with open(os.path.join(chunks_path,chunk + '.bin'), 'rb') as h:
 					chunks_content = h.read()
 					f.write(chunks_content)
-		self.remove_chunks()
 
 	def remove_chunks(self):
 		for file in os.listdir(chunks_path):
