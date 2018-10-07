@@ -27,49 +27,52 @@ origin_port = ''
 def RetrFile(name, sock):
 	filename = sock.recv(1024)
 	filepath = os.path.join(files_path, filename)
-	if os.path.exists(filepath):
-		sock.send("EXISTS " + str(os.path.getsize(filepath)))
-		userResponse = sock.recv(1024)
-		if userResponse[:2] == 'OK':
-			ip, port = sock.getpeername()
-			print "-"*80
-			print "Client " + str(port) + " wants the file " + str(filename)
-
-			print "Making chunks..."
-			make_chunks(filename, filepath)
-			print "Chunks made!"
-
-			directory = os.listdir(chunks_path)
-			print "Sending config files..."
-			send_files('file.ini', sock)
-			print "Config files sent!"
-
-			global origin_port
-			if origin_port == '':
-				origin_port = port
-				print "Sending chunks..."
-				for chunks in directory:
-					if chunks[-4:] == '.bin' :
-						filename = chunks
-						send_files(filename, sock)
-
-			elif port != origin_port:
-				print "There are other clients downloading this file, sending different chunks..."
-				for chunks in reversed(directory):
-					if True:
-						filename = chunks
-						send_files(filename, sock)
-
-			print "Chunks Sent!"
+	if filename[:4] == 'help':
+		print 'Other peers are asking for help, sending chunks...'
+		directory = os.listdir(chunks_path)
+		for chunks in directory:
+			if chunks[-4:] == '.bin':
+				filename = chunks
+				send_files(filename, sock)
 	else:
-		sock.send("ERR")
+		if os.path.exists(filepath):
+			sock.send("EXISTS " + str(os.path.getsize(filepath)))
+			userResponse = sock.recv(1024)
+			if userResponse[:2] == 'OK':
+				ip, port = sock.getpeername()
+				print "-"*80
+				print "Client " + str(port) + " wants the file " + str(filename)
+
+				print "Making chunks..."
+				make_chunks(filename, filepath)
+				print "Chunks made!"
+
+				directory = os.listdir(chunks_path)
+				print "Sending config files..."
+				send_files('file.ini', sock)
+				print "Config files sent!"
+
+				global origin_port
+				if origin_port == '':
+					origin_port = port
+					print "Sending chunks..."
+					for chunks in directory:
+						if chunks[-4:] == '.bin':
+							filename = chunks
+							send_files(filename, sock)
+
+				elif port != origin_port:
+					print "There are other clients downloading this file, sending different chunks..."
+					for chunks in reversed(directory):
+						if chunks[-4:] == '.bin':
+							filename = chunks
+							send_files(filename, sock)
+
+				print "Chunks Sent!"
+		else:
+			sock.send("ERR")
 
 	sock.close()
-
-
-
-
-
 
 def make_chunks(filename, filepath):
 	remove_existing_chunks()
@@ -158,7 +161,7 @@ class server_class(threading.Thread):
 
 				if client_connection:
 					print 'Connect peer success! From %s on port: %d' % (client_addr[0], client_addr[1])
-					t =threading.Thread(target=RetrFile, args=("retrThread", client_connection))
+					t =threading.Thread(target = RetrFile, args=("retrThread", client_connection))
 					t.start()
 
 			except Exception as e:

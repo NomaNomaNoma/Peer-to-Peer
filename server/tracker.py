@@ -131,7 +131,7 @@ class tracker_class():
 						time.sleep(1)
 						print 'Add success!'
 						print 'Now downloading clients are ' + str(download_peer)
-						client_connection.send('add success!')
+						client_connection.sendall(str(download_peer))
 					elif command == 'delete':
 						print 'Removing client from the downloading list...'
 						peer_id = req['peer']

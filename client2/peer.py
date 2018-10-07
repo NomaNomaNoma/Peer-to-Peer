@@ -78,15 +78,53 @@ class query_indexer():
 			print 'File does not exist!'
 			return False
 
-	def add_to_tracker_list(self):
+	def add_to_tracker_list(self, filename):
 		print 'Updating info to the tracker...'
 		time.sleep(1)
 		message = json.dumps({'command':'send', 'peer': credentials})
-		self.send_command_to_tracker(message)
+		peer_list = self.send_command_to_tracker(message)
+		peer_list_result = json.loads(peer_list)
 		print 'Update success!'
 		print 'The tracker will now help to find if any other clients are downloading the same file...'
 		time.sleep(1)
+		print 'Right now following peers are downloading the same file: ' + str(peer_list_result)
+		time.sleep(1)
+		if len(peer_list_result) == 1:
+			print 'You are the only one downloading this file now.'
+		else:
+			peer_list_result.remove(credentials)
+			print 'Other peers: ' + str(peer_list_result) + ' are downloading now, asking for help...'
+			for i in range(0, len(peer_list_result)):
+				self.connect_to_peer(peer_list_result[i], filename)
 		pass
+
+	def connect_to_peer(self, peer_id, filename):
+		peer_connect = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+		peer_connect_addr = ('localhost', int(peer_id))
+		peer_connect.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+		peer_connect.connect(peer_connect_addr)
+		peer_connect.send('help'+ str(filename))
+		while True:
+			size = peer_connect.recv(16)
+			if not size:
+				break
+			size = int(size, 2)
+			filename = peer_connect.recv(size)
+			filesize = peer_connect.recv(32)
+			filesize = int(filesize, 2)
+			file_to_write = open(filename, 'wb')
+			chunksize = 4096
+			while filesize > 0:
+				if filesize < chunksize:
+					chunksize = filesize
+				data = peer_connect.recv(chunksize)
+				file_to_write.write(data)
+				filesize -= len(data)
+			file_to_write.close()
+		print 'Peer Chunks downloaded!'
+		peer_connect.close()
+
+
 
 	def remove_from_tracker_list(self):
 		print 'Removing from downloading client list...'
@@ -97,7 +135,7 @@ class query_indexer():
 		time.sleep(1)
 		pass
 
-
+	#no use right now
 	def obtain(self, peer_id, file_name):
 		print '-'*80
 		print 'Start downloading...'
@@ -159,6 +197,7 @@ class query_indexer():
 
 		finally:
 			self.index_socket.close()
+
 
 if __name__ == '__main__':
 
@@ -257,15 +296,16 @@ if __name__ == '__main__':
 						message = raw_input("File is " + str(filesize/(1024*1024)) + \
 							"Mbs, downloaded? (Y/N)? ->")
 						if message == 'Y':
-							qi.add_to_tracker_list()
-							s.send('OK')
-							print 'Start downloading!'
 							os.chdir(chunks_path)
 							time.sleep(1)
 							print '-'*80
 							print 'Changing direction caused file system daemon error... \nNothing hurts, please ignore...'
 							print '-'*80
 							print 'Downloading chunks...'
+							s.send('OK')
+							print 'Start downloading!'
+							t = threading.Thread(target = qi.add_to_tracker_list(file_name))
+							t.start()
 							while True:
 								size = s.recv(16)
 								if not size:
