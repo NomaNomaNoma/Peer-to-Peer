@@ -93,7 +93,7 @@ class query_indexer():
 			print 'You are the only one downloading this file now.'
 		else:
 			peer_list_result.remove(credentials)
-			print 'Other peers: ' + str(peer_list_result) + ' are downloading now, asking for help...'
+			print 'Other peers: ' + str(peer_list_result) + ' are downloading now, getting chunks from them...'
 			for i in range(0, len(peer_list_result)):
 				self.connect_to_peer(peer_list_result[i], filename)
 		pass
@@ -121,8 +121,9 @@ class query_indexer():
 				file_to_write.write(data)
 				filesize -= len(data)
 			file_to_write.close()
+			print 'recevied chunks from ' + str(peer_id)
 		print 'Peer Chunks downloaded!'
-		peer_connect.close()
+		#peer_connect.close()
 
 
 
@@ -197,6 +198,30 @@ class query_indexer():
 
 		finally:
 			self.index_socket.close()
+
+	def receive_from_tracker(self, sock):
+		print 'Enter thread 2'
+		sock.send('OK')
+		while True:
+			size = sock.recv(16)
+			if not size:
+				break
+			size = int(size, 2)
+			filename = sock.recv(size)
+			filesize = sock.recv(32)
+			filesize = int(filesize, 2)
+			file_to_write = open(filename, 'wb')
+			chunksize = 4096
+			while filesize > 0:
+				if filesize < chunksize:
+					chunksize = filesize
+				data = sock.recv(chunksize)
+				file_to_write.write(data)
+				filesize -= len(data)
+			file_to_write.close()
+			print 'recevied chunks from origin server'
+
+
 
 
 if __name__ == '__main__':
@@ -302,27 +327,14 @@ if __name__ == '__main__':
 							print 'Changing direction caused file system daemon error... \nNothing hurts, please ignore...'
 							print '-'*80
 							print 'Downloading chunks...'
-							s.send('OK')
 							print 'Start downloading!'
-							t = threading.Thread(target = qi.add_to_tracker_list(file_name))
-							t.start()
-							while True:
-								size = s.recv(16)
-								if not size:
-									break
-								size = int(size,2)
-								filename = s.recv(size)
-								filesize = s.recv(32)
-								filesize = int(filesize, 2)
-								file_to_write = open(filename, 'wb')
-								chunksize = 4096
-								while filesize > 0:
-									if filesize < chunksize:
-										chunksize = filesize
-									data = s.recv(chunksize)
-									file_to_write.write(data)
-									filesize -= len(data)
-								file_to_write.close()
+							t1 = threading.Thread(target = qi.add_to_tracker_list, args=(file_name,))
+							t2 = threading.Thread(target = qi.receive_from_tracker, args=(s,))
+							t1.start()
+							t2.start()
+
+							t1.join()
+							t2.join()
 							print "Chunks downloaded! "
 
 							print "Creating File..."
