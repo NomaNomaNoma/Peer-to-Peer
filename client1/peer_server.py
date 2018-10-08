@@ -28,12 +28,35 @@ def RetrFile(name, sock):
 	filename = sock.recv(1024)
 	filepath = os.path.join(files_path, filename)
 	if filename[:4] == 'help':
-		print 'Other peers are asking for help, sending chunks...'
+		print 'Other peers are asking for help, requesting chunks file...'
+		sock.send('existing_chunks')
+		size = sock.recv(16)
+		size = int(size, 2)
+		filename = sock.recv(size)
+		filesize = sock.recv(32)
+		filesize = int(filesize, 2)
+		file_to_write = open(filename, 'wb')
+		chunksize = 4096
+		while filesize > 0:
+			if filesize < chunksize:
+				chunksize = filesize
+			data = sock.recv(chunksize)
+			file_to_write.write(data)
+			filesize -=len(data)
+		file_to_write.close()
+		print 'Requested file list received!'
+
+		config = configparser.ConfigParser()
+		config.read(os.path.join(chunks_path, 'existing_chunks.ini'))
+		chunks_count = config.getint('file', 'chunks_count')
+		chunks = [config.get('chunks', str(i)) for i in range(chunks_count)]
 		directory = os.listdir(chunks_path)
-		for chunks in directory:
-			if chunks[-4:] == '.bin':
-				filename = chunks
-				send_files(filename, sock)
+
+		for chunk in directory:
+			if chunk not in chunks:
+				if chunk[-4:] == '.bin':
+					filename = chunk
+					send_files(filename, sock)
 	else:
 		if os.path.exists(filepath):
 			sock.send("EXISTS " + str(os.path.getsize(filepath)))

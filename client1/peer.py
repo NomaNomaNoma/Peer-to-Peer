@@ -5,10 +5,12 @@ import time
 import os
 import datetime
 from peer_server import server_class
+from peer_server import send_files
 from fileSystem import fileSystem
 from fileSystem import remove_peer
 import make_files
 import threading
+import configparser
 
 root_path = os.path.dirname(os.path.realpath(__file__))
 
@@ -78,6 +80,21 @@ class query_indexer():
 			print 'File does not exist!'
 			return False
 
+	def create_existing_chunks(self):
+		directory = os.listdir(chunks_path)
+		chunks = []
+		for chunk in directory:
+			if chunk[-4:] == '.bin':
+				chunks.append(chunk)
+		config = configparser.ConfigParser()
+		config.add_section('file')
+		config.set('file', 'chunks_count', str(len(chunks)))
+		config.add_section('chunks')
+		for(i, chunks_hash) in enumerate(chunks):
+			config.set('chunks', str(i), chunks_hash)
+		with open(os.path.join(chunks_path, 'existing_chunks.ini'), 'w') as f:
+			config.write(f)
+
 	def add_to_tracker_list(self, filename):
 		print 'Updating info to the tracker...'
 		time.sleep(1)
@@ -104,6 +121,11 @@ class query_indexer():
 		peer_connect.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 		peer_connect.connect(peer_connect_addr)
 		peer_connect.send('help'+ str(filename))
+		recv_message = peer_connect.recv(1024)
+		if recv_message == 'existing_chunks':
+			self.create_existing_chunks()
+			send_files('existing_chunks.ini', peer_connect)
+			time.sleep(1)
 		while True:
 			size = peer_connect.recv(16)
 			if not size:
@@ -123,7 +145,7 @@ class query_indexer():
 			file_to_write.close()
 			print 'recevied chunks from ' + str(peer_id)
 		print 'Peer Chunks downloaded!'
-		#peer_connect.close()
+		peer_connect.close()
 
 
 
@@ -136,49 +158,6 @@ class query_indexer():
 		time.sleep(1)
 		pass
 
-	#no use right now
-	def obtain(self, peer_id, file_name):
-		print '-'*80
-		print 'Start downloading...'
-		print 'Downloading from peer %d' % int(peer_id)
-		time.sleep(1)
-
-		stime = datetime.datetime.now()
-
-		try:
-			peer_addr = ('localhost', int(peer_id))
-			peer_connection = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-			peer_connection.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-			peer_connection.connect(peer_addr)
-			peer_connection.sendall(file_name)
-			response = peer_connection.recv(65536)
-
-		except Exception as e:
-			print 'Cannot download file.'
-			print e.message
-			print '-'*80
-			return
-
-		try:
-			file_path = files_path + file_name
-			fh = open(file_path, 'wb')
-			fh.write(response)
-			fh.close()
-			etime = datetime.datetime.now()
-			total_time = (etime - stime).seconds
-			file_size = os.path.getsize(file_path)
-			print 'Download complete!'
-			print 'Download in ' + str(total_time) +' seconds'
-			print '-'*80
-
-		except Exception as e:
-			print 'Connection broke, please try again.'
-			print e.message
-			print '-'*80
-			return
-
-		finally:
-			peer_connection.close()
 
 	def send_command_to_tracker(self, cmd):
 		try:
@@ -200,7 +179,6 @@ class query_indexer():
 			self.index_socket.close()
 
 	def receive_from_tracker(self, sock):
-		print 'Enter thread 2'
 		sock.send('OK')
 		while True:
 			size = sock.recv(16)
@@ -219,6 +197,10 @@ class query_indexer():
 				file_to_write.write(data)
 				filesize -= len(data)
 			file_to_write.close()
+			# need to improve
+			#make = make_files.makeFiles()
+			# if make.parse_config_file():
+			# 	print 'Download success 5555555555555555555555555'
 			print 'recevied chunks from origin server'
 
 
