@@ -112,7 +112,8 @@ class query_indexer():
 			peer_list_result.remove(credentials)
 			print 'Other peers: ' + str(peer_list_result) + ' are downloading now, getting chunks from them...'
 			for i in range(0, len(peer_list_result)):
-				self.connect_to_peer(peer_list_result[i], filename)
+				ti = threading.Thread(target = self.connect_to_peer, args = (peer_list_result[i], filename))
+				ti.start()
 		pass
 
 	def connect_to_peer(self, peer_id, filename):
@@ -143,10 +144,12 @@ class query_indexer():
 				file_to_write.write(data)
 				filesize -= len(data)
 			file_to_write.close()
+			if self.parse_config_file():
+				time.sleep(1)
+				peer_connect.close()
 			print 'recevied chunks from ' + str(peer_id)
 		print 'Peer Chunks downloaded!'
 		peer_connect.close()
-
 
 
 	def remove_from_tracker_list(self):
@@ -180,7 +183,8 @@ class query_indexer():
 
 	def receive_from_tracker(self, sock):
 		sock.send('OK')
-		while True:
+		condition = 1
+		while condition:
 			size = sock.recv(16)
 			if not size:
 				break
@@ -197,14 +201,25 @@ class query_indexer():
 				file_to_write.write(data)
 				filesize -= len(data)
 			file_to_write.close()
-			# need to improve
-			#make = make_files.makeFiles()
-			# if make.parse_config_file():
-			# 	print 'Download success 5555555555555555555555555'
+			if self.parse_config_file():
+				time.sleep(1)
+				print 'Chunks downloaded!'
+				print 'Creating File...'
+				sock.close()
+				condition = 0
+				make_files.makeFiles()
 			print 'recevied chunks from origin server'
 
-
-
+	def parse_config_file(self):
+		config = configparser.ConfigParser()
+		config.read(os.path.join(chunks_path, 'file.ini'))
+		self.filename = config.get('file', 'name')
+		chunks_count = config.getint('file', 'chunks_count')
+		self.chunks = [config.get('chunks', str(i)) for i in range(chunks_count)]
+		for chunks in self.chunks:
+			if not os.path.exists(os.path.join(chunks_path, chunks + '.bin')):
+				return False
+		return True
 
 if __name__ == '__main__':
 
@@ -317,10 +332,6 @@ if __name__ == '__main__':
 
 							t1.join()
 							t2.join()
-							print "Chunks downloaded! "
-
-							print "Creating File..."
-							make_files.makeFiles()
 							qi.remove_from_tracker_list()
 
 
@@ -328,7 +339,7 @@ if __name__ == '__main__':
 					else:
 						print "File does not Exists!"
 
-				s.close()
+					s.close()
 
 	except Exception as e:
 		print e.message
