@@ -19,9 +19,13 @@ class makeFiles:
 			message = raw_input('Do you want to continue as a server to help others? (Y/N)?')
 			if message == 'Y':
 				print 'You are still uploading chunks to others...'
-				time.sleep(5)
-			print 'Removing chunks...'
-			self.remove_chunks()
+				message = raw_input('Press N to stop. ->')
+				if message == 'N':
+					print 'Removing chunks...'
+					self.remove_chunks()
+			else:
+				print 'Removing chunks...'
+				self.remove_chunks()
 		else:
 			print('Cannot download file, please download again.')
 

@@ -207,6 +207,8 @@ class query_indexer():
 				print 'Creating File...'
 				sock.close()
 				condition = 0
+				elapsed_time = time.time() - start_time
+				print 'Download time is: %f seconds' % float(elapsed_time)
 				make_files.makeFiles()
 			print 'recevied chunks from origin server'
 
@@ -325,6 +327,7 @@ if __name__ == '__main__':
 							print '-'*80
 							print 'Downloading chunks...'
 							print 'Start downloading!'
+							start_time = time.time()
 							t1 = threading.Thread(target = qi.add_to_tracker_list, args=(file_name,))
 							t2 = threading.Thread(target = qi.receive_from_tracker, args=(s,))
 							t1.start()
