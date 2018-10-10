@@ -50,7 +50,7 @@ class fileSystem(threading.Thread):
 			self.connection.sendall(to_send)
 		except Exception as e:
 			print 'Cannot connect to the tracker!'
-			print '*'*80
+			print '-'*80
 
 	def run(self):
 		self.monitor()

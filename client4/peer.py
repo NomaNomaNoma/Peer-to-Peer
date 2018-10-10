@@ -337,6 +337,14 @@ if __name__ == '__main__':
 							t2.join()
 							qi.remove_from_tracker_list()
 
+							print 'Restarting file monitor system...'
+							os.chdir(root_path)
+							file_system = fileSystem(files_path, credentials)
+							file_system.daemon = True
+							file_system.start()
+							time.sleep(1)
+							print 'File monitor system restarted!'
+
 
 
 					else:
